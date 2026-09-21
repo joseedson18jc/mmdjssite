@@ -3,9 +3,25 @@
 Site estático do selo **M & M** (Tribal House): catálogo com players reais em WAV,
 sets dos fundadores via widget oficial do SoundCloud, preço e carrinho.
 
-## Como publicar (GitHub Pages)
+## Como publicar (três opções gratuitas)
 
-O site é estático e roda direto da raiz do repositório. Para ficar no ar:
+### 1. Netlify Drop — mais rápido, sem conta
+
+Abra <https://app.netlify.com/drop> e arraste a **pasta do site** (ou o zip dela)
+para a área indicada. Em segundos sai um endereço no ar, do tipo
+`https://algum-nome.netlify.app`. O endereço é temporário até você criar conta e
+clicar em "Claim site" — aí ele fica seu e dá para trocar o nome.
+
+### 2. Netlify ligado a este repositório — atualiza sozinho
+
+Com conta na Netlify: **Add new site → Import an existing project → GitHub →
+mmdjssite**. O arquivo `netlify.toml` já está aqui, então não precisa configurar
+build: ele publica a raiz. Cada push na `main` gera um deploy novo.
+O mesmo vale para a Vercel, que lê o `vercel.json`.
+
+### 3. GitHub Pages
+
+Também gratuito, e já está tudo pronto:
 
 1. Abra **Settings → Pages** neste repositório.
 2. Em **Source**, escolha **Deploy from a branch**.
