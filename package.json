@@ -1,0 +1,14 @@
+{
+  "name": "mmdjssite",
+  "private": true,
+  "type": "module",
+  "description": "Landing page do selo M & M com checkout Stripe (Pix, cartao e boleto).",
+  "scripts": {
+    "stripe:seed": "node scripts/stripe-seed.mjs",
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "stripe": "^17.5.0"
+  }
+}

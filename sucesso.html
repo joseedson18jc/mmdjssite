@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pedido confirmado · M &amp; M</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FF5500">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700;800&amp;display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%226%22%20fill%3D%22%23FF5500%22%2F%3E%3Cpath%20d%3D%22M6%2020v-8h4l7-6v20l-7-6H6z%22%20fill%3D%22%23fff%22%2F%3E%3C%2Fsvg%3E">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .ok-wrap{max-width:640px;margin:0 auto;padding:72px 20px 96px}
+  .ok-card{background:#fff;border:1px solid #eee;border-radius:14px;padding:32px}
+  .ok-mark{width:52px;height:52px;border-radius:50%;background:#FF5500;display:grid;place-items:center;margin-bottom:20px}
+  .ok-card h1{font-family:'Inter Tight',Inter,sans-serif;font-size:28px;line-height:1.15;margin:0 0 10px}
+  .ok-card p{color:#555;margin:0 0 18px;line-height:1.6}
+  .ok-files{list-style:none;margin:0;padding:0;border-top:1px solid #eee}
+  .ok-files li{border-bottom:1px solid #eee}
+  .ok-files a{display:flex;justify-content:space-between;gap:12px;padding:14px 2px;text-decoration:none;color:#111;font-weight:600;font-size:14px}
+  .ok-files a span{color:#D93A00;font-weight:600}
+  .ok-files a:hover{color:#D93A00}
+  .ok-meta{font-size:13px;color:#777;margin-top:22px}
+</style>
+</head>
+<body>
+<main class="ok-wrap">
+  <div class="ok-card">
+    <div class="ok-mark" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h1 id="titulo">Confirmando seu pagamento…</h1>
+    <p id="texto">Um instante — estamos checando com a Stripe.</p>
+    <ul class="ok-files" id="arquivos" hidden></ul>
+    <p class="ok-meta" id="meta"></p>
+    <p><a class="btn btn-primary" href="./">Voltar ao catálogo</a></p>
+  </div>
+</main>
+<script>
+(function () {
+  var id = new URLSearchParams(location.search).get('session_id');
+  var titulo = document.getElementById('titulo');
+  var texto = document.getElementById('texto');
+  var lista = document.getElementById('arquivos');
+  var meta = document.getElementById('meta');
+  var tentativas = 0;
+
+  if (!id) {
+    titulo.textContent = 'Pedido não identificado';
+    texto.textContent = 'Este link não traz o número da sessão de pagamento. Abra o link que a Stripe te devolveu depois da compra.';
+    return;
+  }
+
+  function brl(c) { return (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+
+  function pinta(p) {
+    if (p.status === 'paid') {
+      titulo.textContent = 'Pagamento confirmado';
+      texto.textContent = 'Obrigado. Seus arquivos estão liberados abaixo' + (p.email ? ' e a confirmação foi para ' + p.email + '.' : '.');
+      lista.innerHTML = (p.arquivos || []).map(function (a) {
+        return '<li><a href="' + a.arquivo + '" download>' + a.titulo + '<span>Baixar</span></a></li>';
+      }).join('');
+      lista.hidden = !(p.arquivos && p.arquivos.length);
+      if (p.total) meta.textContent = 'Pedido ' + p.id + ' · ' + brl(p.total);
+      return true;
+    }
+    if (p.status === 'failed' || p.status === 'refunded') {
+      titulo.textContent = p.status === 'refunded' ? 'Pedido estornado' : 'Pagamento não concluído';
+      texto.textContent = 'Nada foi liberado. Se você acha que houve engano, responda o e-mail da Stripe com o número ' + p.id + '.';
+      return true;
+    }
+    // Pix e boleto levam de segundos a dias. Seguimos checando.
+    titulo.textContent = 'Aguardando confirmação do banco';
+    texto.textContent = 'Pix costuma confirmar em segundos; boleto pode levar até 3 dias úteis. Assim que o dinheiro entrar, os links aparecem aqui e também vão por e-mail.';
+    return false;
+  }
+
+  function checa() {
+    fetch('/api/order?session_id=' + encodeURIComponent(id), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (p) {
+        if (p.error) throw new Error(p.error);
+        if (pinta(p)) return;
+        if (++tentativas < 20) setTimeout(checa, 3000);
+      })
+      .catch(function () {
+        titulo.textContent = 'Não consegui checar o pedido';
+        texto.textContent = 'O pagamento pode ter dado certo mesmo assim. Guarde o número ' + id + ' e fale com a gente.';
+      });
+  }
+  checa();
+})();
+</script>
+</body>
+</html>

@@ -250,9 +250,55 @@
     }
   });
 
-  document.getElementById('checkout').addEventListener('click', function () {
+  var botaoCheckout = document.getElementById('checkout');
+
+  function avisoCheckout(msg) {
+    var corpo = document.getElementById('cart-body');
+    var antigo = document.getElementById('checkout-erro');
+    if (antigo) antigo.remove();
+    if (!msg) return;
+    var p = document.createElement('p');
+    p.id = 'checkout-erro';
+    p.setAttribute('role', 'alert');
+    p.style.cssText = 'margin:12px 0 0;font-size:13px;line-height:1.5;color:#B3002D';
+    p.textContent = msg;
+    corpo.appendChild(p);
+  }
+
+  botaoCheckout.addEventListener('click', function () {
     if (!itens.length) { abreCarrinho(); return; }
-    window.alert('Checkout ainda não conectado.\n\nPróximo passo: ligar este botão a uma Stripe Checkout Session criada no servidor, com Pix, cartão e boleto. O prompt no repositório new-project descreve o fluxo inteiro.');
+    if (botaoCheckout.disabled) return;
+
+    // O servidor só recebe o que foi escolhido. Preço e SKU saem do catálogo dele.
+    var payload = {
+      items: itens.map(function (it) {
+        return it.pack ? { kind: 'pack' } : { kind: 'track', trackId: it.id };
+      }),
+      idempotencyKey: 'mm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10)
+    };
+
+    var rotulo = botaoCheckout.textContent;
+    botaoCheckout.disabled = true;
+    botaoCheckout.textContent = 'Abrindo pagamento\u2026';
+    avisoCheckout('');
+
+    fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (!r.ok || !d.url) throw new Error(d.error || 'Não consegui abrir o pagamento agora.');
+          return d;
+        });
+      })
+      .then(function (d) { window.location.href = d.url; })
+      .catch(function (err) {
+        botaoCheckout.disabled = false;
+        botaoCheckout.textContent = rotulo;
+        avisoCheckout(err.message);
+      });
   });
 
   desenha();
